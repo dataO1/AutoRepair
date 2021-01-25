@@ -1,4 +1,5 @@
 import math
+import random
 import re
 
 from .factorial1 import factorial1, factorial1_test
