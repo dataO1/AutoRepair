@@ -1,3 +1,4 @@
+from autorepair.mutators.combined_mutator import CombinedMutator
 from debuggingbook.StatisticalDebugger import OchiaiDebugger
 from debuggingbook.Repairer import Repairer, ConditionMutator, CrossoverOperator
 from debuggingbook.DeltaDebugger import DeltaDebugger
@@ -32,7 +33,7 @@ def simple_debug_and_repair(f, testcases, function_test,
             function_test(*i)  # Ensure that you use *i here.
 
     repairer = Repairer(debugger,
-                        mutator_class=ConditionMutator,
+                        mutator_class=CombinedMutator,
                         crossover_class=CrossoverOperator,
                         reducer_class=DeltaDebugger,
                         log=log)
