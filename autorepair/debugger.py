@@ -1,10 +1,24 @@
+from test.factorial1 import factorial1, factorial1_test
+from test.factorial1 import get_tests as get_tests_factorial1
+from test.factorial2 import factorial2, factorial2_test
+from test.factorial2 import get_tests as get_tests_factorial2
+from test.factorial3 import factorial3, factorial3_test
+from test.factorial3 import get_tests as get_tests_factorial3
+from test.middle import get_tests as get_tests_middle
+from test.middle import middle, middle_assert, middle_test
+from test.power import get_tests as get_tests_power
+from test.power import power, power_test
+
 from autorepair.mutators.combined_mutator import CombinedMutator
+from autorepair.mutators.allmighty_super_mutator import AllMightySuperMutator
 from debuggingbook.StatisticalDebugger import OchiaiDebugger
 from debuggingbook.Repairer import Repairer, ConditionMutator, CrossoverOperator
 from debuggingbook.DeltaDebugger import DeltaDebugger
 
-def simple_debug_and_repair(f, testcases, function_test, 
-                            log=False):
+import astor
+
+def debug_and_repair(f, testcases, function_test, 
+                            log=True):
     '''
     Debugs a function with the given testcases and the test_function
     and tries to repair it afterwards.
@@ -33,7 +47,9 @@ def simple_debug_and_repair(f, testcases, function_test,
             function_test(*i)  # Ensure that you use *i here.
 
     repairer = Repairer(debugger,
-                        mutator_class=CombinedMutator,
+                        #  mutator_class=CombinedMutator,
+                        #  mutator_class=ConditionMutator,
+                        mutator_class=AllMightySuperMutator,
                         crossover_class=CrossoverOperator,
                         reducer_class=DeltaDebugger,
                         log=log)
