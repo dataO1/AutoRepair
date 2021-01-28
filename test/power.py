@@ -17,7 +17,7 @@ def power_testcase():
 
 def power_test(x, n):
     m = power(x, n)
-    assert m == math.pow(x, n)
+    assert m == pow(x, n)
 
 
 def power_passing_testcase():
