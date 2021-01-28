@@ -1,3 +1,4 @@
+from random import Random
 import random
 import ast
 from ast import NodeVisitor
@@ -48,6 +49,7 @@ class AllMightyVisitor(NodeVisitor):
 
     def visit_FunctionDef(self, node):
         self.add_to('definitions', node, 'name')
+        return super().generic_visit(node)
 
     def visit_AsyncFunctionDef(self, node):
         self.visit_FunctionDef(node)
@@ -69,12 +71,14 @@ class AllMightyVisitor(NodeVisitor):
             self.add_to('conditions', node, 'test')
         return super().generic_visit(node)
 
-class AllMightySuperMutator(StatementMutator):
+class AllMightySuperMutator(ConditionMutator):
     """Mutate all kinds of stuff in an AST"""
 
     def __init__(self, *args, **kwargs):
         """Constructor. Arguments are as with `StatementMutator` constructor."""
         super().__init__(*args, **kwargs)
+        self.rand = Random()
+        self.rand.seed(42)
         self.conditions = get_all_mutation_sources(self.source)
         if self.log:
             print("Found conditions",
@@ -89,28 +93,18 @@ class AllMightySuperMutator(StatementMutator):
         return random.choice(['set', 'not', 'and', 'or'])
 
     def swap(self, node):
-        """Replace `node` condition by a condition from `source`"""
-        if not hasattr(node, 'test'):
-            return super().swap(node)
+        # i dont know why, but i need another random instance or things stop
+        # working
+        swap_func_name = "swap_" + self.rand.choice(['condition'])
+        swap_func = getattr(self, swap_func_name)
+        return swap_func(node)
+        #  return self.swap_condition(node)
 
-        cond = self.choose_condition()
-        new_test = None
+    def swap_condition(self, node):
+        return ConditionMutator.swap(self, node)
 
-        choice = self.choose_bool_op()
+    def swap_name(self, node):
+        raise Exception("TODO: Implement")
 
-        if choice == 'set':
-            new_test = cond
-        elif choice == 'not':
-            new_test = ast.UnaryOp(op=ast.Not(), operand=node.test)
-        elif choice == 'and':
-            new_test = ast.BoolOp(op=ast.And(), values=[cond, node.test])
-        elif choice == 'or':
-            new_test = ast.BoolOp(op=ast.Or(), values=[cond, node.test])
-        else:
-            raise ValueError("Unknown boolean operand")
-
-        if new_test:
-            # ast.copy_location(new_test, node)
-            node.test = new_test
-
-        return node
+    def swap_operator(self, node):
+        raise Exception("TODO: Implement")
