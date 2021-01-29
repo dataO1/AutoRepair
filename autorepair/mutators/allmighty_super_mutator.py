@@ -42,11 +42,20 @@ class OperatorVisitor(NodeVisitor):
 
 class NameVisitor(NodeVisitor):
 
-    def __init__(self):
+    def __init__(self, type=None):
         self.names = []
+        self.type = type
 
-    # TODO: group all names in the same context, so we can substitute each of
-    # them or just one at a time
+    def visit_Name(self, node):
+        if self.type and isinstance(node.ctx,self.type)==True:
+            self.names.append(node)
+        return super().generic_visit(node)
+
+    # ignore func name in call, but get arguments
+    #  def visit_Call(self, node):
+        #  for arg in node.args:
+            #  super().generic_visit(arg)
+        #  return node
 
 
 class AllMightyVisitor(NodeVisitor):
@@ -57,12 +66,15 @@ class AllMightyVisitor(NodeVisitor):
         self.definitions_seen = set()
         super().__init__()
 
-    def add_to(self,target_str, node, attr):
+    def add_to(self,target_str, node, attr=None):
         """ add the attribute of a node to the target list of seen attributes """
         target = getattr(self, target_str)
         target_seen = getattr(self, target_str + "_seen")
 
-        elems = getattr(node, attr, [])
+        if attr:
+            elems = getattr(node, attr, [])
+        else:
+            elems = node
         if not isinstance(elems, list):
             elems = [elems]
         for elem in elems:
@@ -72,7 +84,7 @@ class AllMightyVisitor(NodeVisitor):
                 target_seen.add(elem_str)
 
     def visit_FunctionDef(self, node):
-        self.add_to('definitions', node, 'name')
+        self.add_to('definitions', node)
         return super().generic_visit(node)
 
     def visit_AsyncFunctionDef(self, node):
@@ -85,9 +97,8 @@ class AllMightyVisitor(NodeVisitor):
         self.add_to('conditions', node, 'values')
         return super().generic_visit(node)
 
-    def visit_Assign(self, node):
-        for target in node.targets:
-            self.add_to('definitions', target, 'name')
+    def visit_Name(self, node):
+        self.add_to('definitions', node)
 
     def visit_UnaryOp(self, node):
         if isinstance(node.op, ast.Not):
@@ -107,6 +118,26 @@ class AllMightySuperMutator(ConditionMutator):
         super().__init__(*args, **kwargs)
         self.conditions, self.definitions = get_all_mutation_sources(self.source)
 
+    def _mark_parents(self, root):
+        for node in ast.walk(root):
+            for child in ast.iter_child_nodes(node):
+                child.parent = node
+                if  not type(child) in (int, float, bool, str):
+                    self._mark_parents(child)
+        return node
+
+    def _get_child_attr_name(self, parent, child):
+        for _child in dir(parent):
+            if getattr(parent,_child) is child:
+                return _child
+
+    def _setattr(self, node, target, expr):
+        self._mark_parents(node)
+        attr = self._get_child_attr_name(target.parent, target)
+        #  print(attr)
+        if(attr):
+            setattr(target.parent, attr, expr)
+
     def choose_condition(self):
         """Return a random condition from source."""
         return copy.deepcopy(random.choice(self.conditions))
@@ -121,7 +152,7 @@ class AllMightySuperMutator(ConditionMutator):
     def swap(self, node):
         # i dont know why, but i need another random instance or things stop
         # working
-        swap_func_name = "swap_" + rand.choice(['condition', 'operator' ])
+        swap_func_name = "swap_" + rand.choice(['condition', 'operator', 'one_off_error'])
         swap_func = getattr(self, swap_func_name)
         return swap_func(node)
         #  return self.swap_condition(node)
@@ -129,16 +160,77 @@ class AllMightySuperMutator(ConditionMutator):
     def swap_condition(self, node):
         return ConditionMutator.swap(self, node)
 
+
+    #  def swap_new_name(self, node):
+        #  node = deepcopy(node)
+        #  visitor = NameVisitor()
+        #  visitor.visit(node)
+        #  names = visitor.names
+        #  #  print(names)
+        #  if not names:
+            #  return super().swap(node)
+        #  # choose a random name from definitions to swap
+        #  target = rand.choice(names)
+        #  #  new_name = rand.choice(self.definitions).id + "_autofixed"
+        #  new_name = "laskdfjlaskjf"
+        #  target.id = new_name
+        #  return node
+
     def swap_name(self, node):
         node = deepcopy(node)
         visitor = NameVisitor()
         visitor.visit(node)
         names = visitor.names
+        #  print(names)
         if not names:
-            return super().swap(node)
+            return self.swap(node)
         # choose a random name from definitions to swap
         target = rand.choice(names)
-        target.name = rand.choice(self.definitions)
+        new_name = rand.choice(self.definitions).id
+        while target.id == new_name:
+            new_name = rand.choice(self.definitions).id
+        target.id = new_name
+        return node
+
+    def swap_all_names(self, node):
+        print("before:")
+        print( astor.to_source(node))
+        if isinstance(node, ast.Return):
+            return self.swap(node)
+        node = deepcopy(node)
+        visitor = NameVisitor()
+        visitor.visit(node)
+        names = visitor.names
+        #  print(names)
+        #  print("COLLECTED ALL NAMES")
+        if not names:
+            return self.swap(node)
+        # swap two names in the node
+        new_name = "laskdfjlaskjf"
+        target_name = rand.choice(names).id
+        targets = [target for target in names if target.id == target_name]
+        for target in targets:
+            target.id = new_name
+        print("after:")
+        print( astor.to_source(node))
+        return node
+
+    def swap_one_off_error(self, node):
+        node = deepcopy(node)
+        # get all names, with ctx Load
+        visitor = NameVisitor(ast.Load)
+        visitor.visit(node)
+        names = visitor.names
+        if not names:
+            return self.swap(node)
+        # choose a random name from definitions to increment or decrement
+        target = rand.choice(names)
+        target_id = target.id
+        expr = rand.choice(["n+1","n-1"])
+        expr = ast.parse(expr).body[0].value
+        expr.left.id = target_id
+        # now exchange n with the chosen name and replace name with that
+        self._setattr(node, target, expr)
         return node
 
     def swap_operator(self, node):
@@ -147,7 +239,7 @@ class AllMightySuperMutator(ConditionMutator):
         visitor.visit(node)
         operators = visitor.operators
         if not operators:
-            return super().swap(node)
+            return self.swap(node)
         # choose a random operator to swap
         target = rand.choice(operators)
         operators = [ast.Add ,ast.Mult]
