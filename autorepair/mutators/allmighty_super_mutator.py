@@ -156,7 +156,8 @@ class AllMightySuperMutator(ConditionMutator):
         # i dont know why, but i need another random instance or things stop
         # working
         swap_func_name = "swap_" + rand.choice(['condition',
-            'one_off_error','two_occurrences', 'operator'])
+            'one_off_error','two_occurrences', 'operator',
+            'definition_and_occurrences'])
         swap_func = getattr(self, swap_func_name)
         return swap_func(node)
         #  return self.swap_condition(node)
@@ -184,17 +185,19 @@ class AllMightySuperMutator(ConditionMutator):
         node = deepcopy(node)
         visitor = NameVisitor()
         visitor.visit(node)
-        load = visitor.load
         store = visitor.store
-        #  print(names)
-        if not names:
+        load = visitor.load
+        if not store or (len(load)<1):
             return self.swap(node)
-        # choose a random name from definitions to swap
-        target = rand.choice(names)
-        new_name = rand.choice(self.definitions).id
-        while target.id == new_name:
-            new_name = rand.choice(self.definitions).id
-        target.id = new_name
+        # get first definition in node
+        store_target = store[0] # take the first, not random
+        # filter out all occurrences of same name as store_target
+        load_targets = [name for name in load if name.id == store_target.id]
+        #  print(names)
+        new_id = "fixed_by_autorepair_var"
+        store_target.id = new_id
+        for load_target in load_targets:
+            load_target.id = new_id
         return node
 
     def swap_two_occurrences(self, node):
