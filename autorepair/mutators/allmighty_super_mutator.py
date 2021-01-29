@@ -42,13 +42,16 @@ class OperatorVisitor(NodeVisitor):
 
 class NameVisitor(NodeVisitor):
 
-    def __init__(self, type=None):
-        self.names = []
-        self.type = type
+    def __init__(self):
+        self.load = []
+        self.store = []
 
     def visit_Name(self, node):
-        if self.type and isinstance(node.ctx,self.type)==True:
-            self.names.append(node)
+        if isinstance(node.ctx,ast.Load)==True:
+            self.load.append(node)
+        if isinstance(node.ctx,ast.Store)==True:
+            self.store.append(node)
+
         return super().generic_visit(node)
 
     # ignore func name in call, but get arguments
@@ -152,7 +155,8 @@ class AllMightySuperMutator(ConditionMutator):
     def swap(self, node):
         # i dont know why, but i need another random instance or things stop
         # working
-        swap_func_name = "swap_" + rand.choice(['condition', 'one_off_error','two_occurrences', 'operator'])
+        swap_func_name = "swap_" + rand.choice(['condition',
+            'one_off_error','two_occurrences', 'operator'])
         swap_func = getattr(self, swap_func_name)
         return swap_func(node)
         #  return self.swap_condition(node)
@@ -176,11 +180,12 @@ class AllMightySuperMutator(ConditionMutator):
         #  target.id = new_name
         #  return node
 
-    def swap_some_names(self, node):
+    def swap_definition_and_occurrences(self, node):
         node = deepcopy(node)
         visitor = NameVisitor()
         visitor.visit(node)
-        names = visitor.names
+        load = visitor.load
+        store = visitor.store
         #  print(names)
         if not names:
             return self.swap(node)
@@ -197,9 +202,9 @@ class AllMightySuperMutator(ConditionMutator):
             #  return self.swap(node)
         node = deepcopy(node)
         #  # get all names, with ctx Load
-        visitor = NameVisitor(ast.Load)
+        visitor = NameVisitor()
         visitor.visit(node)
-        names = visitor.names
+        names = visitor.load
         #  #  print(names)
         #  #  print("COLLECTED ALL NAMES")
         if not names or len(names) < 2:
@@ -223,9 +228,9 @@ class AllMightySuperMutator(ConditionMutator):
     def swap_one_off_error(self, node):
         node = deepcopy(node)
         # get all names, with ctx Load
-        visitor = NameVisitor(ast.Load)
+        visitor = NameVisitor()
         visitor.visit(node)
-        names = visitor.names
+        names = visitor.load
         if not names:
             return self.swap(node)
         # choose a random name from definitions to increment or decrement
