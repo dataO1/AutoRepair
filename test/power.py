@@ -1,6 +1,4 @@
 import random
-import math
-
 
 def power(x, n):
     res = 1
@@ -14,11 +12,9 @@ def power_testcase():
     n = random.randrange(100)
     return x, n
 
-
 def power_test(x, n):
     m = power(x, n)
     assert m == pow(x, n)
-
 
 def power_passing_testcase():
     while True:
@@ -28,7 +24,6 @@ def power_passing_testcase():
             return x, n
         except AssertionError:
             pass
-
 
 def power_failing_testcase():
     while True:

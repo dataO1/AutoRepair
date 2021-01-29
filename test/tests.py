@@ -37,7 +37,7 @@ test0 = Test(factorial1, get_tests_factorial1(TESTS), factorial1_test, math.fact
 test1 = Test(factorial2, get_tests_factorial2(TESTS), factorial2_test, math.factorial)
 test2 = Test(factorial3, get_tests_factorial3(TESTS), factorial3_test, math.factorial)
 test3 = Test(middle, get_tests_middle(TESTS), middle_test, middle_assert)
-test4 = Test(power, get_tests_power(TESTS), power_test, math.pow)
+test4 = Test(power, get_tests_power(TESTS), power_test, pow)
 
 ALL_TESTS = [test0, test1, test2, test3, test4]
 

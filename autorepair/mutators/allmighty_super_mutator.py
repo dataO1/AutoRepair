@@ -122,8 +122,8 @@ class AllMightySuperMutator(ConditionMutator):
         for node in ast.walk(root):
             for child in ast.iter_child_nodes(node):
                 child.parent = node
-                if  not type(child) in (int, float, bool, str):
-                    self._mark_parents(child)
+                #  if  not type(child) in (int, float, bool, str):
+                self._mark_parents(child)
         return node
 
     def _get_child_attr_name(self, parent, child):
@@ -152,7 +152,7 @@ class AllMightySuperMutator(ConditionMutator):
     def swap(self, node):
         # i dont know why, but i need another random instance or things stop
         # working
-        swap_func_name = "swap_" + rand.choice(['condition', 'operator', 'one_off_error'])
+        swap_func_name = "swap_" + rand.choice(['condition', 'one_off_error','two_occurrences', 'operator'])
         swap_func = getattr(self, swap_func_name)
         return swap_func(node)
         #  return self.swap_condition(node)
@@ -176,7 +176,7 @@ class AllMightySuperMutator(ConditionMutator):
         #  target.id = new_name
         #  return node
 
-    def swap_name(self, node):
+    def swap_some_names(self, node):
         node = deepcopy(node)
         visitor = NameVisitor()
         visitor.visit(node)
@@ -192,27 +192,32 @@ class AllMightySuperMutator(ConditionMutator):
         target.id = new_name
         return node
 
-    def swap_all_names(self, node):
-        print("before:")
-        print( astor.to_source(node))
-        if isinstance(node, ast.Return):
-            return self.swap(node)
+    def swap_two_occurrences(self, node):
+        #  if isinstance(node, ast.Return):
+            #  return self.swap(node)
         node = deepcopy(node)
-        visitor = NameVisitor()
+        #  # get all names, with ctx Load
+        visitor = NameVisitor(ast.Load)
         visitor.visit(node)
         names = visitor.names
-        #  print(names)
-        #  print("COLLECTED ALL NAMES")
-        if not names:
+        #  #  print(names)
+        #  #  print("COLLECTED ALL NAMES")
+        if not names or len(names) < 2:
             return self.swap(node)
-        # swap two names in the node
-        new_name = "laskdfjlaskjf"
-        target_name = rand.choice(names).id
-        targets = [target for target in names if target.id == target_name]
-        for target in targets:
-            target.id = new_name
-        print("after:")
-        print( astor.to_source(node))
+        #  print("before:")
+        #  print( astor.to_source(node))
+        #  print(f"names:{[name.id for name in names]}")
+        target1 = rand.choice(names)
+        target2 = rand.choice(names)
+        # as long as drawing the same name redraw
+        while (target1.id == target2.id):
+            target2 = rand.choice(names)
+        # swap the two names in the node
+        h = deepcopy(target1.id)
+        target1.id = target2.id
+        target2.id = h
+        #  print("after:")
+        #  print( astor.to_source(node))
         return node
 
     def swap_one_off_error(self, node):
