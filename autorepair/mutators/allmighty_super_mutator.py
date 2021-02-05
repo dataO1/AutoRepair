@@ -255,6 +255,6 @@ class AllMightySuperMutator(ConditionMutator):
             return self.swap(node)
         # choose a random operator to swap
         target = rand.choice(operators)
-        operators = [ast.Add ,ast.Mult]
+        operators = [ast.Add, ast.Mult, ast.Div]
         target.op = rand.choice(operators)()
         return node
